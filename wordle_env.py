@@ -39,7 +39,12 @@ class WordleEnv:
             Initial state dict
         """
         if target is not None:
-            self.target = target.strip().lower()
+            target = target.strip().lower()
+
+            if target not in self.word_list:
+                raise ValueError(f"Invalid target word: '{target}'")
+
+            self.target = target
         else:
             self.target = random.choice(self.word_list)
         self.guesses = []
@@ -67,7 +72,7 @@ class WordleEnv:
             # Penalise invalid guesses without ending the episode
             return self.get_state(), -0.5, False, {"invalid_guess": True}
 
-        feedback = self.get_feedback(guess)
+        feedback = self.simulate_feedback(guess, self.target)
         self.guesses.append((guess, feedback))
 
         won = guess == self.target
@@ -227,8 +232,13 @@ class WordleEnv:
             # Must match greens
             if i in green and word[i] != green[i]:
                 return False
-            # Must not contain gray letters
-            if letter in gray:
+
+        # Gray letters cannot appear UNLESS
+        # they are also known yellow/green letters
+        protected_letters = set(green.values()) | set(yellow.keys())
+
+        for letter in gray:
+            if letter not in protected_letters and letter in word:
                 return False
 
         # Yellow letters must appear, but not in the ruled-out positions
@@ -240,6 +250,31 @@ class WordleEnv:
                     return False
 
         return True
+
+    def simulate_feedback(self, guess: str, target: str) -> list[int]:
+        """
+        Compute feedback for an arbitrary target word
+        without modifying environment state.
+        """
+        feedback = [0] * self.WORD_LENGTH
+        target_remaining = Counter(target)
+
+        # Greens
+        for i in range(self.WORD_LENGTH):
+            if guess[i] == target[i]:
+                feedback[i] = 2
+                target_remaining[guess[i]] -= 1
+
+        # Yellows
+        for i in range(self.WORD_LENGTH):
+            if feedback[i] == 2:
+                continue
+
+            if guess[i] in target_remaining and target_remaining[guess[i]] > 0:
+                feedback[i] = 1
+                target_remaining[guess[i]] -= 1
+
+        return feedback
 
     # ─────────────────────────────────────────────────────────────────────────
     # Display
@@ -308,7 +343,7 @@ if __name__ == "__main__":
 
     # ── Test 4: candidates filter ──────────────────────────────────────────
     state = env.reset(target="spare")
-    env.step("crane")   # c=gray, r=yellow pos2, a=yellow pos1, n=gray, e=green pos4
+    state, reward, done, info = env.step("crane")   # c=gray, r=yellow pos2, a=yellow pos1, n=gray, e=green pos4
     candidates = state["candidates"]
     print(f"✓ Candidates after 'crane': {env.get_candidates()}")
 
