@@ -1,6 +1,20 @@
 import math
 from collections import defaultdict
 
+_feedback_cache = {}
+
+def get_cached_feedback(env, guess, target):
+    key = (guess, target)
+
+    if key not in _feedback_cache:
+        _feedback_cache[key] = tuple(env.simulate_feedback(guess, target))
+
+    return _feedback_cache[key]
+
+
+
+
+
 
 def expected_information_gain(env, guess, candidates):
     """
@@ -11,7 +25,7 @@ def expected_information_gain(env, guess, candidates):
     partitions = defaultdict(int)
 
     for target in candidates:
-        feedback = tuple(env.simulate_feedback(guess, target))
+        feedback = get_cached_feedback(env, guess, target)
         partitions[feedback] += 1
 
     total = len(candidates)
