@@ -7,13 +7,30 @@ class EntropyAgent:
         self.use_full_word_list = use_full_word_list
 
     def choose_guess(self, env, state):
+        guesses = state.get("guesses", [])
         candidates = state["candidates"]
 
-        if len(candidates) == 0:
+        if len(guesses) == 0:
+            possible_guesses = self.word_list[:100]
+
+        elif len(candidates) == 0:
             return self.word_list[0]
 
         if len(candidates) == 1:
             return candidates[0]
+        
+        elif len(candidates) == 1:
+            return candidates[0]
+
+
+        elif len(candidates) <= 5:
+            return candidates[0]
+        
+        elif len(candidates) > 25:
+            possible_guesses = self.word_list[:50]
+
+        else:
+            possible_guesses = candidates
 
         possible_guesses = candidates[:100]
 
@@ -21,7 +38,11 @@ class EntropyAgent:
         best_score = -1
 
         for guess in possible_guesses:
-            score = expected_information_gain(env, guess, candidates)
+            score = expected_information_gain(
+                env,
+                guess,
+                candidates
+            )
 
             if score > best_score:
                 best_score = score

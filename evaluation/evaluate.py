@@ -4,7 +4,7 @@ from wordle_env import WordleEnv
 
 from agents.random_agent import RandomAgent
 from agents.entropy_agent import EntropyAgent
-
+from agents.reinforce_agent import ReinforceAgent
 
 def evaluate_agent(agent, words, max_games=100):
     """
@@ -160,6 +160,32 @@ if __name__ == "__main__":
     end = time.time()
 
     print_summary("Entropy Agent", entropy_summary)
+
+    print(
+        f"Evaluation Time: "
+        f"{end - start:.2f} seconds"
+    )
+    # ─────────────────────────────────────────────────────────────────────
+    # REINFORCE-Inspired Agent Evaluation
+    # ─────────────────────────────────────────────────────────────────────
+
+    reinforce_agent = ReinforceAgent(words)
+
+    # Optional: train first
+    env = WordleEnv(words)
+    reinforce_agent.train(env, episodes=1000)
+
+    start = time.time()
+
+    reinforce_summary = evaluate_agent(
+        reinforce_agent,
+        words,
+        max_games=100
+    )
+
+    end = time.time()
+
+    print_summary("REINFORCE-Inspired Agent", reinforce_summary)
 
     print(
         f"Evaluation Time: "
