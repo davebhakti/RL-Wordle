@@ -15,12 +15,23 @@ class WordleEnv:
     MAX_GUESSES = 6
     WORD_LENGTH = 5
 
-    def __init__(self, word_list: list[str]):
+    def __init__(self, word_list: list[str], answer_words: list[str] = None):
         """
         Args:
-            word_list: list of valid 5-letter words (loaded from your words.txt)
+            word_list: list of valid 5-letter guess words
+            answer_words: optional list of valid secret/target words
         """
         self.word_list = [w.strip().lower() for w in word_list if len(w.strip()) == 5]
+
+        if answer_words is None:
+            self.answer_words = self.word_list
+        else:
+            self.answer_words = [
+                w.strip().lower()
+                for w in answer_words
+                if len(w.strip()) == 5
+            ]
+
         self.target = None
         self.guesses = []       # list of (guess, feedback) tuples
         self.done = False
@@ -41,12 +52,12 @@ class WordleEnv:
         if target is not None:
             target = target.strip().lower()
 
-            if target not in self.word_list:
+            if target not in self.answer_words:
                 raise ValueError(f"Invalid target word: '{target}'")
 
             self.target = target
         else:
-            self.target = random.choice(self.word_list)
+            self.target = random.choice(self.answer_words)
         self.guesses = []
         self.done = False
         return self.get_state()
@@ -104,25 +115,7 @@ class WordleEnv:
         Returns:
             List of 5 ints: 2=green, 1=yellow, 0=gray
         """
-        target = self.target
-        feedback = [0] * self.WORD_LENGTH
-        target_remaining = Counter(target)
-
-        # Pass 1: greens
-        for i in range(self.WORD_LENGTH):
-            if guess[i] == target[i]:
-                feedback[i] = 2
-                target_remaining[guess[i]] -= 1
-
-        # Pass 2: yellows
-        for i in range(self.WORD_LENGTH):
-            if feedback[i] == 2:
-                continue
-            if guess[i] in target_remaining and target_remaining[guess[i]] > 0:
-                feedback[i] = 1
-                target_remaining[guess[i]] -= 1
-
-        return feedback
+        return self.simulate_feedback(guess, self.target)
 
     # ─────────────────────────────────────────────────────────────────────────
     # State
@@ -167,9 +160,9 @@ class WordleEnv:
         }
 
     def get_candidates(self) -> list[str]:
-        """Return the list of words still consistent with all feedback so far."""
+        """Return the list of answer words still consistent with all feedback so far."""
         state = self._get_constraints()
-        return [w for w in self.word_list if self._is_consistent(w, state)]
+        return [w for w in self.answer_words if self._is_consistent(w, state)]
 
     # ─────────────────────────────────────────────────────────────────────────
     # Reward
@@ -343,7 +336,7 @@ if __name__ == "__main__":
 
     # ── Test 4: candidates filter ──────────────────────────────────────────
     state = env.reset(target="spare")
-    state, reward, done, info = env.step("crane")   # c=gray, r=yellow pos2, a=yellow pos1, n=gray, e=green pos4
+    state, reward, done, info = env.step("crane")
     candidates = state["candidates"]
     print(f"✓ Candidates after 'crane': {env.get_candidates()}")
 
