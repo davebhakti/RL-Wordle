@@ -174,7 +174,7 @@ if __name__ == "__main__":
             agent,
             valid_words,
             answer_words,
-            max_games=200
+            max_games=None
         )
 
         print_summary(name, summary)
